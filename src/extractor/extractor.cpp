@@ -9,20 +9,20 @@
 #include "extractor/scripting_environment.hpp"
 
 #include "extractor/raster_source.hpp"
+#include "util/graph_loader.hpp"
 #include "util/io.hpp"
+#include "util/lua_util.hpp"
 #include "util/make_unique.hpp"
+#include "util/name_table.hpp"
 #include "util/simple_logger.hpp"
 #include "util/timing_util.hpp"
-#include "util/lua_util.hpp"
-#include "util/graph_loader.hpp"
-#include "util/name_table.hpp"
 
 #include "util/typedefs.hpp"
 
-#include "util/static_graph.hpp"
-#include "util/static_rtree.hpp"
 #include "extractor/compressed_edge_container.hpp"
 #include "extractor/restriction_map.hpp"
+#include "util/static_graph.hpp"
+#include "util/static_rtree.hpp"
 
 #include "extractor/tarjan_scc.hpp"
 
@@ -41,14 +41,14 @@
 
 #include <algorithm>
 #include <atomic>
+#include <bitset>
+#include <chrono>
 #include <chrono>
 #include <fstream>
 #include <iostream>
 #include <thread>
 #include <unordered_map>
 #include <vector>
-#include <bitset>
-#include <chrono>
 
 namespace osrm
 {
@@ -159,8 +159,7 @@ int Extractor::run()
             // parse OSM entities in parallel, store in resulting vectors
             tbb::parallel_for(
                 tbb::blocked_range<std::size_t>(0, osm_elements.size()),
-                [&](const tbb::blocked_range<std::size_t> &range)
-                {
+                [&](const tbb::blocked_range<std::size_t> &range) {
                     ExtractionNode result_node;
                     ExtractionWay result_way;
                     auto &local_context = scripting_environment.GetContex();
