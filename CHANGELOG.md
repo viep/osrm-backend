@@ -5,6 +5,9 @@
      - new parameter `annotate` for `route` and `match` requests.  Returns additional data about each
        coordinate along the selected/matched route line.
 
+   - Infrastructure
+     - BREAKING: Intersection Classification adds a new file to the mix (osrm.icd). This breaks the fileformat for older versions.
+
 # 5.1.0
    Changes with regard to 5.0.0
 
