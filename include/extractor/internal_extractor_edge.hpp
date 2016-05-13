@@ -29,7 +29,6 @@ struct InternalExtractorEdge
 
     struct WeightData
     {
-
         WeightData() : duration(0.0), type(WeightType::INVALID) {}
 
         union
@@ -52,6 +51,7 @@ struct InternalExtractorEdge
                  true,
                  TRAVEL_MODE_INACCESSIBLE,
                  false,
+                 INVALID_LANEID,
                  guidance::RoadClassificationData())
     {
     }
@@ -67,6 +67,7 @@ struct InternalExtractorEdge
                                    bool startpoint,
                                    TravelMode travel_mode,
                                    bool is_split,
+                                   const LaneID lane_id,
                                    guidance::RoadClassificationData road_classification)
         : result(OSMNodeID(source),
                  OSMNodeID(target),
@@ -79,6 +80,7 @@ struct InternalExtractorEdge
                  startpoint,
                  travel_mode,
                  is_split,
+                 lane_id,
                  std::move(road_classification)),
           weight_data(std::move(weight_data))
     {
@@ -95,13 +97,13 @@ struct InternalExtractorEdge
     static InternalExtractorEdge min_osm_value()
     {
         return InternalExtractorEdge(MIN_OSM_NODEID, MIN_OSM_NODEID, 0, WeightData(), false, false,
-                                     false, false, true, TRAVEL_MODE_INACCESSIBLE, false,
+                                     false, false, true, TRAVEL_MODE_INACCESSIBLE, false, INVALID_LANEID,
                                      guidance::RoadClassificationData());
     }
     static InternalExtractorEdge max_osm_value()
     {
         return InternalExtractorEdge(MAX_OSM_NODEID, MAX_OSM_NODEID, 0, WeightData(), false, false,
-                                     false, false, true, TRAVEL_MODE_INACCESSIBLE, false,
+                                     false, false, true, TRAVEL_MODE_INACCESSIBLE, false, INVALID_LANEID,
                                      guidance::RoadClassificationData());
     }
 

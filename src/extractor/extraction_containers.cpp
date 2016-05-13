@@ -5,10 +5,10 @@
 #include "util/range_table.hpp"
 
 #include "util/exception.hpp"
-#include "util/simple_logger.hpp"
-#include "util/timing_util.hpp"
 #include "util/fingerprint.hpp"
 #include "util/lua_util.hpp"
+#include "util/simple_logger.hpp"
+#include "util/timing_util.hpp"
 
 #include <boost/assert.hpp>
 #include <boost/filesystem.hpp>
@@ -49,6 +49,7 @@ ExtractionContainers::ExtractionContainers()
     stxxl::vector<unsigned> dummy_vector;
     // Insert the empty string, it has no data and is zero length
     name_lengths.push_back(0);
+    turn_lane_lengths.push_back(0);
 }
 
 ExtractionContainers::~ExtractionContainers()
@@ -59,6 +60,8 @@ ExtractionContainers::~ExtractionContainers()
     all_edges_list.clear();
     name_char_data.clear();
     name_lengths.clear();
+    turn_lane_char_data.clear();
+    turn_lane_lengths.clear();
     restrictions_list.clear();
     way_start_end_id_list.clear();
 }
@@ -76,6 +79,7 @@ ExtractionContainers::~ExtractionContainers()
 void ExtractionContainers::PrepareData(const std::string &output_file_name,
                                        const std::string &restrictions_file_name,
                                        const std::string &name_file_name,
+                                       const std::string &turn_lane_file_name,
                                        lua_State *segment_state)
 {
     try
@@ -93,7 +97,8 @@ void ExtractionContainers::PrepareData(const std::string &output_file_name,
         PrepareRestrictions();
         WriteRestrictions(restrictions_file_name);
 
-        WriteNames(name_file_name);
+        WriteCharData(name_file_name,name_lengths,name_char_data);
+        WriteCharData(turn_lane_file_name,turn_lane_lengths,turn_lane_char_data);
     }
     catch (const std::exception &e)
     {
@@ -101,21 +106,23 @@ void ExtractionContainers::PrepareData(const std::string &output_file_name,
     }
 }
 
-void ExtractionContainers::WriteNames(const std::string &names_file_name) const
+void ExtractionContainers::WriteCharData(const std::string &file_name,
+                                         const stxxl::vector<unsigned> &offsets,
+                                         const stxxl::vector<char> &char_data) const
 {
     std::cout << "[extractor] writing street name index ... " << std::flush;
     TIMER_START(write_name_index);
-    boost::filesystem::ofstream name_file_stream(names_file_name, std::ios::binary);
+    boost::filesystem::ofstream name_file_stream(file_name, std::ios::binary);
 
     unsigned total_length = 0;
 
-    for (const unsigned &name_length : name_lengths)
+    for (const unsigned &name_length : offsets)
     {
         total_length += name_length;
     }
 
     // builds and writes the index
-    util::RangeTable<> name_index_range(name_lengths);
+    util::RangeTable<> name_index_range(offsets);
     name_file_stream << name_index_range;
 
     name_file_stream.write((char *)&total_length, sizeof(unsigned));
@@ -124,7 +131,7 @@ void ExtractionContainers::WriteNames(const std::string &names_file_name) const
     char write_buffer[WRITE_BLOCK_BUFFER_SIZE];
     unsigned buffer_len = 0;
 
-    for (const char &c : name_char_data)
+    for (const char &c : char_data)
     {
         write_buffer[buffer_len++] = c;
 
@@ -262,8 +269,7 @@ void ExtractionContainers::PrepareEdges(lua_State *segment_state)
 
     // Remove all remaining edges. They are invalid because there are no corresponding nodes for
     // them. This happens when using osmosis with bbox or polygon to extract smaller areas.
-    auto markSourcesInvalid = [](InternalExtractorEdge &edge)
-    {
+    auto markSourcesInvalid = [](InternalExtractorEdge &edge) {
         util::SimpleLogger().Write(LogLevel::logWARNING) << "Found invalid node reference "
                                                          << edge.result.source;
         edge.result.source = SPECIAL_NODEID;
@@ -332,8 +338,7 @@ void ExtractionContainers::PrepareEdges(lua_State *segment_state)
                 boost::cref(*node_iterator), distance, boost::ref(edge_iterator->weight_data));
         }
 
-        const double weight = [distance](const InternalExtractorEdge::WeightData &data)
-        {
+        const double weight = [distance](const InternalExtractorEdge::WeightData &data) {
             switch (data.type)
             {
             case InternalExtractorEdge::WeightType::EDGE_DURATION:
@@ -373,8 +378,7 @@ void ExtractionContainers::PrepareEdges(lua_State *segment_state)
 
     // Remove all remaining edges. They are invalid because there are no corresponding nodes for
     // them. This happens when using osmosis with bbox or polygon to extract smaller areas.
-    auto markTargetsInvalid = [](InternalExtractorEdge &edge)
-    {
+    auto markTargetsInvalid = [](InternalExtractorEdge &edge) {
         util::SimpleLogger().Write(LogLevel::logWARNING) << "Found invalid node reference "
                                                          << edge.result.target;
         edge.result.target = SPECIAL_NODEID;

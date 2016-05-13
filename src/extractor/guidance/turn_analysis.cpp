@@ -11,8 +11,8 @@
 #include <limits>
 #include <map>
 #include <set>
-#include <unordered_set>
 #include <unordered_map>
+#include <unordered_set>
 
 using osrm::util::guidance::getTurnDirection;
 
@@ -42,16 +42,20 @@ TurnAnalysis::TurnAnalysis(const util::NodeBasedDynamicGraph &node_based_graph,
                                                                  barrier_nodes,
                                                                  node_info_list,
                                                                  compressed_edge_container),
-      roundabout_handler(node_based_graph, node_info_list, compressed_edge_container, name_table, street_name_suffix_table),
-      motorway_handler(node_based_graph, node_info_list, name_table,street_name_suffix_table),
-      turn_handler(node_based_graph, node_info_list, name_table,street_name_suffix_table)
+      roundabout_handler(node_based_graph,
+                         node_info_list,
+                         compressed_edge_container,
+                         name_table,
+                         street_name_suffix_table),
+      motorway_handler(node_based_graph, node_info_list, name_table, street_name_suffix_table),
+      turn_handler(node_based_graph, node_info_list, name_table, street_name_suffix_table)
 {
 }
 
-std::vector<TurnOperation> TurnAnalysis::getTurns(const NodeID from_nid, const EdgeID via_eid) const
+Intersection TurnAnalysis::assignTurnTypes(const NodeID from_nid,
+                                           const EdgeID via_eid,
+                                           Intersection intersection) const
 {
-    auto intersection = intersection_generator(from_nid, via_eid);
-
     // Roundabouts are a main priority. If there is a roundabout instruction present, we process the
     // turn as a roundabout
     if (roundabout_handler.canProcess(from_nid, via_eid, intersection))
@@ -72,7 +76,12 @@ std::vector<TurnOperation> TurnAnalysis::getTurns(const NodeID from_nid, const E
             intersection = turn_handler(from_nid, via_eid, std::move(intersection));
         }
     }
+    return intersection;
+}
 
+std::vector<TurnOperation>
+TurnAnalysis::transformIntersectionIntoTurns(const Intersection &intersection) const
+{
     std::vector<TurnOperation> turns;
     for (auto road : intersection)
         if (road.entry_allowed)

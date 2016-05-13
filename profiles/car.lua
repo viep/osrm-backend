@@ -368,6 +368,12 @@ function way_function (way, result)
       --    result.name = highway  -- if no name exists, use way type
   end
 
+  local turn_lanes = way:get_value_by_key("turn:lanes")
+  if( turn_lanes ) then
+    result.turn_lanes = turn_lanes;
+  end
+
+
   if junction and "roundabout" == junction then
     result.roundabout = true
   end

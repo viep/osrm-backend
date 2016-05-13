@@ -1,10 +1,10 @@
 #ifndef NODE_BASED_GRAPH_HPP
 #define NODE_BASED_GRAPH_HPP
 
-#include "util/dynamic_graph.hpp"
-#include "extractor/node_based_edge.hpp"
-#include "util/graph_utils.hpp"
 #include "extractor/guidance/classification_data.hpp"
+#include "extractor/node_based_edge.hpp"
+#include "util/dynamic_graph.hpp"
+#include "util/graph_utils.hpp"
 
 #include <tbb/parallel_sort.h>
 
@@ -31,10 +31,11 @@ struct NodeBasedEdgeData
                       bool reversed,
                       bool roundabout,
                       bool startpoint,
-                      extractor::TravelMode travel_mode)
+                      extractor::TravelMode travel_mode,
+                      const LaneID lane_id)
         : distance(distance), edge_id(edge_id), name_id(name_id),
           access_restricted(access_restricted), reversed(reversed), roundabout(roundabout),
-          startpoint(startpoint), travel_mode(travel_mode)
+          startpoint(startpoint), travel_mode(travel_mode), lane_id(lane_id)
     {
     }
 
@@ -46,6 +47,7 @@ struct NodeBasedEdgeData
     bool roundabout : 1;
     bool startpoint : 1;
     extractor::TravelMode travel_mode : 4;
+    LaneID lane_id;
     extractor::guidance::RoadClassificationData road_classification;
 
     bool IsCompatibleTo(const NodeBasedEdgeData &other) const
@@ -53,7 +55,7 @@ struct NodeBasedEdgeData
         return (name_id == other.name_id) && (reversed == other.reversed) &&
                (roundabout == other.roundabout) && (startpoint == other.startpoint) &&
                (access_restricted == other.access_restricted) &&
-               (travel_mode == other.travel_mode) &&
+               (travel_mode == other.travel_mode) && (lane_id == other.lane_id) &&
                (road_classification == other.road_classification);
     }
 };
@@ -69,8 +71,7 @@ NodeBasedDynamicGraphFromEdges(std::size_t number_of_nodes,
 {
     auto edges_list = directedEdgesFromCompressed<NodeBasedDynamicGraph::InputEdge>(
         input_edge_list, [](NodeBasedDynamicGraph::InputEdge &output_edge,
-                            const extractor::NodeBasedEdge &input_edge)
-        {
+                            const extractor::NodeBasedEdge &input_edge) {
             output_edge.data.distance = static_cast<int>(input_edge.weight);
             BOOST_ASSERT(output_edge.data.distance > 0);
 
@@ -80,6 +81,7 @@ NodeBasedDynamicGraphFromEdges(std::size_t number_of_nodes,
             output_edge.data.travel_mode = input_edge.travel_mode;
             output_edge.data.startpoint = input_edge.startpoint;
             output_edge.data.road_classification = input_edge.road_classification;
+            output_edge.data.lane_id = input_edge.lane_id;
         });
 
     tbb::parallel_sort(edges_list.begin(), edges_list.end());

@@ -35,6 +35,7 @@ class ExtractorCallbacks
   private:
     // used to deduplicate street names: actually maps to name ids
     std::unordered_map<std::string, NodeID> string_map;
+    std::unordered_map<std::string, LaneID> lane_map;
     ExtractionContainers &external_memory;
 
   public:
