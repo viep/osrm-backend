@@ -4,6 +4,12 @@
    - API:
      - new parameter `annotate` for `route` and `match` requests.  Returns additional data about each
        coordinate along the selected/matched route line.
+     - Introducing Intersections for Route Steps. This breaks the API format in multiple ways.
+         - `bearing_before`/`bearing_after` are no longer supplied with a StepManeuver
+         - `exit` is no longer supplied for turns other than roundabouts
+         - `location` is no longer supplied for StepManeuvers
+         - every RouteStep is supplied with a list of at least one `Intersection`.
+         - Intersections offer the removed values from StepManeuver
 
    - Infrastructure
      - BREAKING: Intersection Classification adds a new file to the mix (osrm.icd). This breaks the fileformat for older versions.
