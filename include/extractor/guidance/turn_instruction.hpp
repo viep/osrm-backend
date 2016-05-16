@@ -5,6 +5,7 @@
 
 #include <boost/assert.hpp>
 
+#include "util/typedefs.hpp"
 #include "extractor/guidance/roundabout_type.hpp"
 
 namespace osrm
@@ -69,27 +70,30 @@ enum TurnType // at the moment we can support 32 turn types, without increasing 
 struct TurnInstruction
 {
     TurnInstruction(const TurnType type = TurnType::Invalid,
-                    const DirectionModifier direction_modifier = DirectionModifier::Straight)
-        : type(type), direction_modifier(direction_modifier)
+                    const DirectionModifier direction_modifier = DirectionModifier::UTurn,
+                    const LaneID lane_tupel_id = 0)
+        : type(type), direction_modifier(direction_modifier), lane_tupel_id(lane_tupel_id)
     {
     }
 
     TurnType type : 5;
     DirectionModifier direction_modifier : 3;
+    // the lane tupel that is used for the turn
+    LaneID lane_tupel_id;
 
     static TurnInstruction INVALID()
     {
-        return TurnInstruction(TurnType::Invalid, DirectionModifier::UTurn);
+        return TurnInstruction(TurnType::Invalid, DirectionModifier::UTurn, INVALID_LANEID);
     }
 
     static TurnInstruction NO_TURN()
     {
-        return TurnInstruction(TurnType::NoTurn, DirectionModifier::UTurn);
+        return TurnInstruction(TurnType::NoTurn, DirectionModifier::UTurn, INVALID_LANEID);
     }
 
     static TurnInstruction REMAIN_ROUNDABOUT(const RoundaboutType, const DirectionModifier modifier)
     {
-        return TurnInstruction(TurnType::StayOnRoundabout, modifier);
+        return TurnInstruction(TurnType::StayOnRoundabout, modifier, INVALID_LANEID);
     }
 
     static TurnInstruction ENTER_ROUNDABOUT(const RoundaboutType roundabout_type,
@@ -98,7 +102,7 @@ struct TurnInstruction
         const constexpr TurnType enter_instruction[] = {
             TurnType::Invalid, TurnType::EnterRoundabout, TurnType::EnterRotary,
             TurnType::EnterRoundaboutIntersection};
-        return {enter_instruction[static_cast<int>(roundabout_type)], modifier};
+        return {enter_instruction[static_cast<int>(roundabout_type)], modifier, INVALID_LANEID};
     }
 
     static TurnInstruction EXIT_ROUNDABOUT(const RoundaboutType roundabout_type,
@@ -107,7 +111,7 @@ struct TurnInstruction
         const constexpr TurnType exit_instruction[] = {TurnType::Invalid, TurnType::ExitRoundabout,
                                                        TurnType::ExitRotary,
                                                        TurnType::ExitRoundaboutIntersection};
-        return {exit_instruction[static_cast<int>(roundabout_type)], modifier};
+        return {exit_instruction[static_cast<int>(roundabout_type)], modifier, INVALID_LANEID};
     }
 
     static TurnInstruction ENTER_AND_EXIT_ROUNDABOUT(const RoundaboutType roundabout_type,
@@ -116,7 +120,7 @@ struct TurnInstruction
         const constexpr TurnType exit_instruction[] = {
             TurnType::Invalid, TurnType::EnterAndExitRoundabout, TurnType::EnterAndExitRotary,
             TurnType::EnterAndExitRoundaboutIntersection};
-        return {exit_instruction[static_cast<int>(roundabout_type)], modifier};
+        return {exit_instruction[static_cast<int>(roundabout_type)], modifier, INVALID_LANEID};
     }
 
     static TurnInstruction ENTER_ROUNDABOUT_AT_EXIT(const RoundaboutType roundabout_type,
@@ -125,23 +129,25 @@ struct TurnInstruction
         const constexpr TurnType enter_instruction[] = {
             TurnType::Invalid, TurnType::EnterRoundaboutAtExit, TurnType::EnterRotaryAtExit,
             TurnType::EnterRoundaboutIntersectionAtExit};
-        return {enter_instruction[static_cast<int>(roundabout_type)], modifier};
+        return {enter_instruction[static_cast<int>(roundabout_type)], modifier, INVALID_LANEID};
     }
 
     static TurnInstruction SUPPRESSED(const DirectionModifier modifier)
     {
-        return {TurnType::Suppressed, modifier};
+        return {TurnType::Suppressed, modifier, INVALID_LANEID};
     }
 };
 
 inline bool operator!=(const TurnInstruction lhs, const TurnInstruction rhs)
 {
-    return lhs.type != rhs.type || lhs.direction_modifier != rhs.direction_modifier;
+    return lhs.type != rhs.type || lhs.direction_modifier != rhs.direction_modifier ||
+           lhs.lane_tupel_id != rhs.lane_tupel_id;
 }
 
 inline bool operator==(const TurnInstruction lhs, const TurnInstruction rhs)
 {
-    return lhs.type == rhs.type && lhs.direction_modifier == rhs.direction_modifier;
+    return lhs.type == rhs.type && lhs.direction_modifier == rhs.direction_modifier &&
+           lhs.lane_tupel_id == rhs.lane_tupel_id;
 }
 
 } // namespace guidance

@@ -372,9 +372,16 @@ function way_function (way, result)
   local turn_lanes_forward = way:get_value_by_key("turn:lanes:forward")
   local turn_lanes_backward = way:get_value_by_key("turn:lanes:backward")
   if( turn_lanes ~= "" ) then
-    result.turn_lanes = turn_lanes;
-  elseif( turn_lanes_forward ~= "" or turn_lanes_backward ~= "" ) then
-    result.turn_lanes = turn_lanes_forward .. "&" .. turn_lanes_backward;
+    result.turn_lanes_forward = turn_lanes;
+    result.turn_lanes_backward = turn_lanes;
+  else
+    if( turn_lanes_forward ~= "" ) then
+        result.turn_lanes_forward = turn_lanes_forward;
+    end
+
+    if( turn_lanes_backward ~= "" ) then
+        result.turn_lanes_backward = turn_lanes_backward;
+    end
   end
 
 
