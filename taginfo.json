@@ -205,6 +205,16 @@
             "description": "Turn Lanes for lane guidance."
         },
         {
+            "key": "turn:lanes:forward",
+            "object_types": [ "way" ],
+            "description": "Turn Lanes for lane guidance."
+        },
+        {
+            "key": "turn:lanes:backward",
+            "object_types": [ "way" ],
+            "description": "Turn Lanes for lane guidance."
+        },
+        {
             "key": "ref",
             "object_types": [ "way" ],
             "description": "Ref of road for navigation instructions, overrides name."
