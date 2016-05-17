@@ -1,6 +1,8 @@
 #include "extractor/guidance/turn_lane_matcher.hpp"
 
 #include <cstdint>
+#include <map>
+#include <utility>
 
 namespace osrm
 {
@@ -41,11 +43,11 @@ TurnLaneMatcher::TurnLaneMatcher(const util::NodeBasedDynamicGraph &node_based_g
 void TurnLaneMatcher::assignTurnLanes(const EdgeID via_edge, Intersection intersection) const
 {
     const auto &data = node_based_graph.GetEdgeData(via_edge);
-    const auto lane_string = turn_lane_strings.GetNameForID(data.lane_id);
+    const auto turn_lane_string = turn_lane_strings.GetNameForID(data.lane_id);
 
-    if( lane_string.empty() )
+    if (turn_lane_string.empty())
     {
-        for( auto &road : intersection )
+        for (auto &road : intersection)
         {
             road.turn.instruction.lane_tupel_id = 0;
         }
@@ -56,6 +58,45 @@ void TurnLaneMatcher::assignTurnLanes(const EdgeID via_edge, Intersection inters
     const constexpr char *turn_directions[] = {
         "left",        "slight_left", "sharp_left",    "through",        "right", "slight_right",
         "sharp_right", "reverse",     "merge_to_left", "merge_to_right", "none"};
+
+    auto getNextTag = [](std::string &string, const char separator) {
+        auto pos = string.find_last_of(separator);
+        auto result = pos != std::string::npos ? string.substr(pos + 1) : string;
+
+        string.resize(pos == std::string::npos ? 0 : pos);
+        return result;
+    };
+
+    auto setLaneData = [&](std::map<std::string, std::pair<int, int>> &map, std::string lane, const int current_lane) {
+        do
+        {
+            auto identifier = getNextTag(lane,';');
+            if( identifier.empty() )
+                identifier = "none";
+            auto map_iterator = map.find(identifier);
+            if( map_iterator == map.end() )
+                map[identifier] = std::make_pair(current_lane,current_lane);
+            else
+                map_iterator->second.second = current_lane;
+        }while(!lane.empty());
+    };
+
+    auto lane_map = [&](std::string lane_string) {
+        std::map<std::string, std::pair<int, int>> result;
+        auto num_lanes = std::count(lane_string.begin(),lane_string.end(),'|')+1;
+        int lane_nr = 0;
+        do
+        {
+            auto lane = getNextTag(lane_string,'|');
+            setLaneData(result,lane,lane_nr);
+            ++lane_nr;
+        } while (lane_nr < num_lanes);
+
+        return result;
+    }(turn_lane_string);
+
+    for( auto tag : lane_map )
+        std::cout << "Lane Information: " << tag.first << " " << tag.second.first << "-" << tag.second.second << std::endl;
 
     std::cout << "Lane Data: " << turn_lane_strings.GetNameForID(data.lane_id) << std::endl;
     for (const auto &turn : intersection)
