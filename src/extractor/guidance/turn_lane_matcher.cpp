@@ -38,10 +38,19 @@ TurnLaneMatcher::TurnLaneMatcher(const util::NodeBasedDynamicGraph &node_based_g
     (130, turn slight right, <3,2,0>) (180,ramp straight,<3,1,1>), and (320, turn sharp left,
    <3,1,2>)
  */
-void TurnLaneMatcher::assignTurnLanes(const EdgeID via_edge, Intersection Intersection) const
+void TurnLaneMatcher::assignTurnLanes(const EdgeID via_edge, Intersection intersection) const
 {
     const auto &data = node_based_graph.GetEdgeData(via_edge);
     const auto lane_string = turn_lane_strings.GetNameForID(data.lane_id);
+
+    if( lane_string.empty() )
+    {
+        for( auto &road : intersection )
+        {
+            road.turn.instruction.lane_tupel_id = 0;
+        }
+        return;
+    }
 
     // the list of allowed entries for turn_lane strings
     const constexpr char *turn_directions[] = {
@@ -49,7 +58,7 @@ void TurnLaneMatcher::assignTurnLanes(const EdgeID via_edge, Intersection Inters
         "sharp_right", "reverse",     "merge_to_left", "merge_to_right", "none"};
 
     std::cout << "Lane Data: " << turn_lane_strings.GetNameForID(data.lane_id) << std::endl;
-    for (const auto &turn : Intersection)
+    for (const auto &turn : intersection)
     {
         std::cout << "Turn: " << toString(turn) << std::endl;
     }
