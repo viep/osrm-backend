@@ -330,7 +330,8 @@ void EdgeBasedGraphFactory::GenerateEdgeExpandedEdges(
     guidance::TurnAnalysis turn_analysis(*m_node_based_graph, m_node_info_list, *m_restriction_map,
                                          m_barrier_nodes, m_compressed_edge_container, name_table,
                                          street_name_suffix_table);
-    guidance::TurnLaneMatcher turn_lane_matcher(*m_node_based_graph, turn_lanes );
+    guidance::TurnLaneMatcher turn_lane_matcher(*m_node_based_graph, turn_lanes, m_node_info_list,
+                                                turn_analysis);
 
     bearing_class_by_node_based_node.resize(m_node_based_graph->GetNumberOfNodes(),
                                             std::numeric_limits<std::uint32_t>::max());
@@ -345,14 +346,14 @@ void EdgeBasedGraphFactory::GenerateEdgeExpandedEdges(
                 continue;
             }
 
+            const NodeID node_v = m_node_based_graph->GetTarget(edge_from_u);
             ++node_based_edge_counter;
             auto intersection = turn_analysis.getIntersection(node_u, edge_from_u);
             intersection =
                 turn_analysis.assignTurnTypes(node_u, edge_from_u, std::move(intersection));
+
             turn_lane_matcher.assignTurnLanes(edge_from_u, intersection);
             const auto possible_turns = turn_analysis.transformIntersectionIntoTurns(intersection);
-
-            const NodeID node_v = m_node_based_graph->GetTarget(edge_from_u);
 
             // the entry class depends on the turn, so we have to classify the interesction for
             // every edge
