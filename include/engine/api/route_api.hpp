@@ -93,8 +93,9 @@ class RouteAPI : public BaseAPI
 
             auto leg_geometry = guidance::assembleGeometry(
                 BaseAPI::facade, path_data, phantoms.source_phantom, phantoms.target_phantom);
-            auto leg = guidance::assembleLeg(facade, path_data, leg_geometry, phantoms.source_phantom,
-                                             phantoms.target_phantom, reversed_target, parameters.steps);
+            auto leg =
+                guidance::assembleLeg(facade, path_data, leg_geometry, phantoms.source_phantom,
+                                      phantoms.target_phantom, reversed_target, parameters.steps);
 
             if (parameters.steps)
             {
@@ -162,7 +163,8 @@ class RouteAPI : public BaseAPI
             auto &leg_geometry = leg_geometries[idx];
             std::transform(
                 legs[idx].steps.begin(), legs[idx].steps.end(), std::back_inserter(step_geometries),
-                [this, &leg_geometry](const guidance::RouteStep &step) {
+                [this, &leg_geometry](const guidance::RouteStep &step)
+                {
                     if (parameters.geometries == RouteParameters::GeometriesType::Polyline)
                     {
                         return static_cast<util::json::Value>(
@@ -176,28 +178,37 @@ class RouteAPI : public BaseAPI
                 });
         }
 
-        auto result = json::makeRoute(route,
-                               json::makeRouteLegs(std::move(legs), std::move(step_geometries)),
-                               std::move(json_overview));
+        auto result =
+            json::makeRoute(route, json::makeRouteLegs(std::move(legs), std::move(step_geometries)),
+                            std::move(json_overview));
 
         if (parameters.annotation)
         {
             util::json::Array durations;
             util::json::Array distances;
+            util::json::Array nodes;
             for (const auto idx : util::irange<std::size_t>(0UL, leg_geometries.size()))
             {
                 auto &leg_geometry = leg_geometries[idx];
-                std::for_each(leg_geometry.annotations.begin(),
-                              leg_geometry.annotations.end(),
-                              [this, &durations, &distances](const guidance::LegGeometry::Annotation &step) {
-                                  durations.values.push_back(step.duration);
-                                  distances.values.push_back(step.distance);
+                std::for_each(
+                    leg_geometry.annotations.begin(), leg_geometry.annotations.end(),
+                    [this, &durations, &distances](const guidance::LegGeometry::Annotation &step)
+                    {
+                        durations.values.push_back(step.duration);
+                        distances.values.push_back(step.distance);
+                    });
+                std::for_each(leg_geometry.osm_node_ids.begin(), leg_geometry.osm_node_ids.end(),
+                              [this, &nodes](const OSMNodeID &node_id)
+                              {
+                                  nodes.values.push_back(static_cast<std::uint64_t>(node_id));
                               });
             }
 
             util::json::Object details;
             details.values["distance"] = std::move(distances);
             details.values["duration"] = std::move(durations);
+
+            details.values["nodes"] = std::move(nodes);
 
             result.values["annotation"] = std::move(details);
         }

@@ -28,6 +28,7 @@ struct SharedDataLayout
         GRAPH_NODE_LIST,
         GRAPH_EDGE_LIST,
         COORDINATE_LIST,
+        OSM_NODE_ID_LIST,
         TURN_INSTRUCTION,
         TRAVEL_MODE,
         R_SEARCH_TREE,
