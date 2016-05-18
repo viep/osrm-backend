@@ -4,6 +4,8 @@
 #include <cstdint>
 #include <iomanip>
 
+#include <boost/algorithm/string/predicate.hpp>
+
 namespace osrm
 {
 namespace extractor
@@ -52,7 +54,7 @@ void TurnLaneMatcher::assignTurnLanes(const EdgeID via_edge, Intersection inters
     if (turn_lane_string.empty())
     {
         for (auto &road : intersection)
-            road.turn.instruction.lane_tupel_id = 0;
+            road.turn.instruction.lane_tupel = {INVALID_LANEID, INVALID_LANEID};
 
         return;
     }
@@ -120,12 +122,12 @@ void TurnLaneMatcher::assignTurnLanes(const EdgeID via_edge, Intersection inters
     if (lane_data.size() == 1 && lane_data[0].tag == "none")
     {
         for (auto &road : intersection)
-            road.turn.instruction.lane_tupel_id = 0;
+            road.turn.instruction.lane_tupel = {INVALID_LANEID, INVALID_LANEID};
         return;
     }
 
     // check whether we are at a simple intersection
-    const bool is_simple = isSimpleIntersection(turn_lane_string, intersection);
+    const bool is_simple = isSimpleIntersection(lane_data, intersection);
 
     auto node = node_based_graph.GetTarget(via_edge);
     auto coordinate = node_info_list[node];
@@ -183,10 +185,12 @@ void TurnLaneMatcher::assignTurnLanes(const EdgeID via_edge, Intersection inters
                   << ") " << turn_lane_string << std::endl;
         */
         for (auto &road : intersection)
-            road.turn.instruction.lane_tupel_id = 0;
+            road.turn.instruction.lane_tupel = {INVALID_LANEID, INVALID_LANEID};
 
         return;
     }
+
+    // Now assign the turn lanes to their respective turns
 
     /*
     std::cout << "Location: " << std::setprecision(12) << util::toFloating(coordinate.lat) << " "
@@ -255,31 +259,41 @@ TurnLaneMatcher::LaneDataVector TurnLaneMatcher::handleNoneValueAtSimpleTurn(
         {
             bool print = false;
             // we have to create multiple turns
-            if (connection_count < lane_data.size())
+            if (connection_count > lane_data.size())
             {
-
-                if (connection_count + 1 == lane_data.size() &&
-                    (lane_data[index].to - lane_data[index].from == 0))
+                // a none-turn is allowing multiple turns. we have to add a lane-data entry for
+                // every possible turn
+            }
+            // we have to reduce it, assigning it to neighboring turns
+            else if (connection_count < lane_data.size())
+            {
+                // a prerequisite is simple turns. Larger differences should not end up here
+                BOOST_ASSERT(connection_count + 1 == lane_data.size());
+                // an additional line at the side is only reasonable if it is targeting public
+                // service vehicles. Otherwise, we should not have it
+                // TODO what about lane numbering. Should we count differently?
+                if (index == 0 || index + 1 == lane_data.size())
                 {
-                    if (index > 0)
-                        lane_data[index - 1].to = lane_data[index].to;
-                    if (index + 1 < lane_data.size())
-                        lane_data[index + 1].from = lane_data[index].from;
+                    lane_data.erase(lane_data.begin() + index);
+                }
+                else if (lane_data[index].to - lane_data[index].from <= 1)
+                {
+                    lane_data[index - 1].to = lane_data[index].from;
+                    lane_data[index + 1].from = lane_data[index].to;
 
                     lane_data.erase(lane_data.begin() + index);
                 }
             }
-            // we have to reduce it, assigning it to neighboring turns
-            else if (connection_count > lane_data.size())
-            {
-            }
-            // we have to rename and possibly augment existing ones
+            // we have to rename and possibly augment existing ones. The pure count remains the
+            // same.
             else
             {
                 // find missing tag and augment neighboring, if possible
                 if (index == 0)
                 {
-                    if (has_right)
+                    if (has_right &&
+                        (lane_data.size() == 1 || (lane_data[index + 1].tag != "sharp_right" &&
+                                                   lane_data[index + 1].tag != "right")))
                     {
                         lane_data[index].tag = "right";
                         if (lane_data.size() > 1 && lane_data[index + 1].tag == "through")
@@ -292,7 +306,9 @@ TurnLaneMatcher::LaneDataVector TurnLaneMatcher::handleNoneValueAtSimpleTurn(
                 }
                 else if (index + 1 == lane_data.size())
                 {
-                    if (has_left)
+                    if (has_left &&
+                        (lane_data.size() == 1 || (lane_data[index + 1].tag != "sharp_left" &&
+                                                   lane_data[index + 1].tag != "left")))
                     {
                         lane_data[index].tag = "left";
                         if (lane_data[index - 1].tag == "through")
@@ -305,24 +321,20 @@ TurnLaneMatcher::LaneDataVector TurnLaneMatcher::handleNoneValueAtSimpleTurn(
                 }
                 else
                 {
+                    print = true;
+                    std::cout << "Input [" << index << "]" << std::endl;
+                    for (auto tag : lane_data)
+                        std::cout << "Lane Information: " << tag.tag << " " << tag.from << "-"
+                                  << tag.to << std::endl;
 
-                    if (has_through)
+                    if ((lane_data[index + 1].tag == "left" ||
+                         lane_data[index + 1].tag == "slight_left" ||
+                         lane_data[index + 1].tag == "sharp_left") &&
+                        (lane_data[index - 1].tag == "right" ||
+                         lane_data[index - 1].tag == "slight_right" ||
+                         lane_data[index - 1].tag == "sharp_right"))
                     {
-                        std::cout << "Input [" << index << "]" << std::endl;
-                        for (auto tag : lane_data)
-                            std::cout << "Lane Information: " << tag.tag << " " << tag.from << "-"
-                                      << tag.to << std::endl;
-
-                        print = true;
-                        if ((lane_data[index + 1].tag == "left" ||
-                             lane_data[index + 1].tag == "slight_left" ||
-                             lane_data[index + 1].tag == "sharp_left") &&
-                            (lane_data[index - 1].tag == "right" ||
-                             lane_data[index - 1].tag == "slight_right" ||
-                             lane_data[index - 1].tag == "sharp_right"))
-                        {
-                            lane_data[index].tag = "through";
-                        }
+                        lane_data[index].tag = "through";
                     }
                 }
             }
@@ -361,13 +373,33 @@ TurnLaneMatcher::LaneDataVector TurnLaneMatcher::handleNoneValueAtSimpleTurn(
  * Here we check for simple Intersections. A simple intersection has a long enough segment following
  * the turn, offers no straight turn, or only non-trivial turn operations.
  */
-bool TurnLaneMatcher::isSimpleIntersection(const std::string &turn_lane_string,
+bool TurnLaneMatcher::isSimpleIntersection(const LaneDataVector &lane_data,
                                            const Intersection &intersection) const
 {
     // if we are on a straight road, turn lanes are only reasonable in connection to the next
-    // intersection, or in case of a merge
+    // intersection, or in case of a merge. If not all but one (straight) are merges, we don't
+    // consider the intersection simple
     if (intersection.size() == 2)
-        return turn_lane_string.find("merge") != std::string::npos;
+        return std::count_if(
+                   lane_data.begin(), lane_data.end(),
+                   [](const TurnLaneData &data) { return boost::starts_with(data.tag, "merge"); }) +
+                   std::size_t{1} >=
+               lane_data.size();
+
+    // in case an intersection offers far more lane data items than actual turns, some of them have
+    // to be for another intersection. A single additional item can be for an invalid bus lane.
+    const auto num_turns =
+        std::count_if(intersection.begin(), intersection.end(),
+                      [](const ConnectedRoad &road) { return road.entry_allowed; });
+
+    // more than two additional lane data entries -> lanes target a different intersection
+    if (num_turns + std::size_t{2} <= lane_data.size())
+        return false;
+
+    // single additional lane data entry is alright, if it is none at the side. This usually refers
+    // to a bus-lane
+    if (num_turns + std::size_t{1} == lane_data.size())
+        return lane_data.front().tag == "none" || lane_data.back().tag == "none";
 
     // find straightmost turn
     const auto straightmost_index = [&]() {
@@ -390,6 +422,9 @@ bool TurnLaneMatcher::isSimpleIntersection(const std::string &turn_lane_string,
     const auto &data = node_based_graph.GetEdgeData(straightmost_turn.turn.eid);
     if (data.distance > 30)
         return true;
+
+    // better save than sorry
+    return false;
 }
 
 } // namespace guidance

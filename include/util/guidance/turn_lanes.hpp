@@ -59,22 +59,21 @@ class LaneTupel
   public:
     LaneTupel();
     LaneTupel(std::uint8_t lanes_at_turn,
-              std::uint8_t lanes_in_turn,
-              std::uint8_t first_lane_from_the_right);
+              std::uint8_t lanes_in_turn);
+//              std::uint8_t first_lane_from_the_right);
 
     bool operator==(const LaneTupel other) const;
+    bool operator!=(const LaneTupel other) const;
     bool operator<(const LaneTupel other) const;
 
 //  private:
     std::uint8_t lanes_at_turn;
     std::uint8_t lanes_in_turn;
-    std::uint8_t first_lane_from_the_right;
-    std::uint8_t padding;
+    //std::uint8_t first_lane_from_the_right;
+    //std::uint8_t padding;
 
     friend std::size_t std::hash<LaneTupel>::operator()(const LaneTupel &) const;
 };
-
-std::vector<LaneTupel> makeLaneTupels(const std::string &turn_lane_string);
 
 } // namespace guidance
 } // namespace util

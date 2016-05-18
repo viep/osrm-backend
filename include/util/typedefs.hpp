@@ -58,16 +58,16 @@ using NodeID = unsigned int;
 using EdgeID = unsigned int;
 using EdgeWeight = int;
 
-using LaneID = std::uint16_t;
-static const LaneID INVALID_LANEID = std::numeric_limits<std::uint16_t>::max();
+using LaneID = std::uint8_t;
+static const LaneID INVALID_LANEID = std::numeric_limits<LaneID>::max();
 
 using BearingClassID = std::uint32_t;
-static const BearingClassID INVALID_BEARING_CLASSID = std::numeric_limits<std::uint32_t>::max();
+static const BearingClassID INVALID_BEARING_CLASSID = std::numeric_limits<BearingClassID>::max();
 
 using DiscreteBearing = std::uint16_t;
 
 using EntryClassID = std::uint16_t;
-static const EntryClassID INVALID_ENTRY_CLASSID = std::numeric_limits<std::uint16_t>::max();
+static const EntryClassID INVALID_ENTRY_CLASSID = std::numeric_limits<EntryClassID>::max();
 
 static const NodeID SPECIAL_NODEID = std::numeric_limits<unsigned>::max();
 static const NodeID SPECIAL_SEGMENTID = std::numeric_limits<int>::max();
